@@ -1,4 +1,4 @@
-const api = axios.create({
+  const api = axios.create({
   baseURL: 'https://api.themoviedb.org/3/',
   headers: {
     'Content-Type': 'application/json;charset=utf-8',
@@ -11,8 +11,21 @@ const api = axios.create({
 
 // Utils
 
-function createMovies(movies, container) {
-  container.innerHTML = '';
+const lazyLoader=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if (entry.isIntersecting){
+     const url=entry.target.getAttribute('data-src')
+     entry.target.setAttribute('src',url)
+    }
+  })
+});
+
+
+
+function createMovies(movies, container, {lazyLoad=false,clean=true}={}) {
+  if (clean){
+    container.innerHTML = '';
+  }
 
   movies.forEach(movie => {
     const movieContainer = document.createElement('div');
@@ -25,9 +38,10 @@ function createMovies(movies, container) {
     movieImg.classList.add('movie-img');
     movieImg.setAttribute('alt', movie.title);
     movieImg.setAttribute(
-      'src',
-      'https://image.tmdb.org/t/p/w300' + movie.poster_path,
+      'data-src',
+      movie.poster_path?'https://image.tmdb.org/t/p/w300' + movie.poster_path:"src/img/IMG_20220912_182224 (1).jpg"
     );
+    lazyLoader.observe(movieImg)
 
     movieContainer.appendChild(movieImg);
     container.appendChild(movieContainer);
@@ -99,6 +113,31 @@ async function getTrendingMovies() {
   const movies = data.results;
 
   createMovies(movies, genericSection);
+  // const btnLoadMore=document.createElement('button')
+  // btnLoadMore.innerText="Cargar mas";
+  // btnLoadMore.addEventListener('click',getPaginatedTrendingMovies);
+  // btnLoadMore.setAttribute("id","loadMore")
+  // genericSection.appendChild(btnLoadMore)
+}
+
+let page=1
+window.addEventListener("scroll",getPaginatedTrendingMovies )
+async function getPaginatedTrendingMovies(){
+  const {scrollTop,scrollHeight,clientHeight}=document.documentElement
+  const scrollIsBottom=(scrollTop+clientHeight)>=(scrollHeight-15)
+  if(scrollIsBottom){
+    page++
+    const {data}=await api('trending/movie/day',{
+      params:{
+        page
+      }
+    });
+    const movies=data.results
+    createMovies(movies,genericSection,{clean:false})
+  }
+
+ 
+  // genericSection.appendChild(btnLoadMore)
 }
 
 async function getMovieById(id) {
